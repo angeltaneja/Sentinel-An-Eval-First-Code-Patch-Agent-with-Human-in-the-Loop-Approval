@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentinel | Eval-First Code Patch Agent Dashboard</title>
+  <meta name="description" content="Stateful Proposal Engine with Human-in-the-Loop Approval and Isolated Docker Sandboxing">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #080b11;
+      --bg-card: rgba(18, 24, 38, 0.7);
+      --bg-card-hover: rgba(26, 35, 55, 0.85);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --primary-cyan: #00f2fe;
+      --primary-blue: #4facfe;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-yellow: #f59e0b;
+      --accent-purple: #8b5cf6;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --font-ui: 'Inter', -apple-system, sans-serif;
+      --font-display: 'Outfit', sans-serif;
+      --font-mono: 'Fira Code', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(0, 242, 254, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    /* Header Nav */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem 2.5rem;
+      border-bottom: 1px solid var(--border-color);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(8, 11, 17, 0.8);
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-shield {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary-cyan), var(--primary-blue));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      box-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
+    }
+
+    .logo-text h1 {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(90deg, #ffffff, #93c5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      animation: pulseDot 2s infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Main Container */
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    /* Hero Banner */
+    .hero-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .hero-info h2 {
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .hero-info p {
+      color: var(--text-muted);
+      max-width: 650px;
+      font-size: 0.95rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary-cyan), var(--primary-blue));
+      color: #040810;
+      box-shadow: 0 4px 15px rgba(0, 242, 254, 0.25);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 242, 254, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Grid Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 2rem;
+    }
+
+    /* State Machine Graph Section */
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.75rem;
+      backdrop-filter: blur(16px);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .panel-header h3 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Graph Visualizer */
+    .graph-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      position: relative;
+    }
+
+    .nodes-flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1rem;
+      position: relative;
+    }
+
+    .node-card {
+      background: rgba(10, 15, 26, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .node-card.active {
+      border-color: var(--primary-cyan);
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .node-card.completed {
+      border-color: var(--accent-green);
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .node-card.interrupted {
+      border-color: var(--accent-yellow);
+      background: rgba(245, 158, 11, 0.08);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+      animation: alertPulse 1.8s infinite;
+    }
+
+    @keyframes alertPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+    }
+
+    .node-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.35rem;
+    }
+
+    .node-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Scorecard & Diff Area */
+    .review-gate-section {
+      margin-top: 1.5rem;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 14px;
+      background: rgba(245, 158, 11, 0.03);
+      padding: 1.5rem;
+      display: none;
+    }
+
+    .review-gate-section.visible {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .metrics-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .metric-pill {
+      background: rgba(10, 15, 26, 0.9);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-val {
+      font-size: 1.25rem;
+      font-weight: 700;
+      font-family: var(--font-display);
+      color: var(--accent-green);
+    }
+
+    /* Diff Container */
+    .diff-block {
+      background: #05080f;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      overflow-x: auto;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .diff-add {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      display: block;
+      padding: 0.1rem 0.5rem;
+      border-left: 3px solid var(--accent-green);
+    }
+
+    .diff-del {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      display: block;
+      padding: 0.1rem 0.5rem;
+      border-left: 3px solid var(--accent-red);
+    }
+
+    .diff-hunk {
+      color: #60a5fa;
+      font-weight: 600;
+      display: block;
+      padding: 0.2rem 0.5rem;
+    }
+
+    /* Audit Logs Feed */
+    .logs-feed {
+      height: 480px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+    }
+
+    .log-entry {
+      background: rgba(10, 15, 26, 0.9);
+      border-left: 3px solid var(--primary-cyan);
+      border-radius: 0 8px 8px 0;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+    }
+
+    .log-node {
+      font-weight: 600;
+      color: var(--primary-cyan);
+    }
+
+    /* Decision bar */
+    .approval-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+    }
+
+    .btn-approve {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+    }
+
+    .btn-reject {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .pr-banner {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid var(--accent-green);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-top: 1.5rem;
+      display: none;
+    }
+
+    .pr-banner.visible {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header>
+    <div class="logo-container">
+      <div class="logo-shield">🛡️</div>
+      <div class="logo-text">
+        <h1>SENTINEL</h1>
+      </div>
+    </div>
+    <div class="badge-status">
+      <span class="badge-dot"></span>
+      <span>State Machine Online</span>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Hero / Control Bar -->
+    <section class="hero-banner">
+      <div class="hero-info">
+        <h2>Eval-First Code Patch Proposal Engine</h2>
+        <p>Sentinel safely diagnoses GitHub issues, retrieves AST symbols using hybrid search (BM25 + Dense + RRF), isolates testing in Docker, and pauses at the Human Gate.</p>
+      </div>
+      <div class="hero-actions">
+        <button id="btn-run" class="btn btn-primary" onclick="startExecution()">
+          <span>▶ Trigger Sentinel Run</span>
+        </button>
+        <button class="btn btn-secondary" onclick="resetState()">
+          <span>↺ Reset</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Layout Grid -->
+    <div class="dashboard-grid">
+      <!-- Left: State Machine Topology & Review Gate -->
+      <div class="left-column">
+        <div class="panel">
+          <div class="panel-header">
+            <h3><span>⚡</span> LangGraph State Topology</h3>
+            <span id="run-status" style="font-size: 0.85rem; color: var(--text-muted);">Status: Ready</span>
+          </div>
+
+          <!-- Nodes Flow -->
+          <div class="graph-container">
+            <div class="nodes-flow">
+              <div id="node-ingest" class="node-card">
+                <div class="node-title">1. INGEST</div>
+                <div class="node-desc">GitHub Issue #42</div>
+              </div>
+              <div id="node-plan" class="node-card">
+                <div class="node-title">2. PLAN</div>
+                <div class="node-desc">LLM Strategy</div>
+              </div>
+              <div id="node-retrieve" class="node-card">
+                <div class="node-title">3. RETRIEVE</div>
+                <div class="node-desc">Tree-sitter + RRF</div>
+              </div>
+              <div id="node-generate" class="node-card">
+                <div class="node-title">4. GENERATE</div>
+                <div class="node-desc">Diff Synthesis</div>
+              </div>
+              <div id="node-sandbox" class="node-card">
+                <div class="node-title">5. SANDBOX</div>
+                <div class="node-desc">Isolated Docker</div>
+              </div>
+            </div>
+
+            <div class="nodes-flow" style="margin-top: 1rem;">
+              <div id="node-repair" class="node-card">
+                <div class="node-title">REPAIR (↺)</div>
+                <div class="node-desc">Max 3 / Cycle Check</div>
+              </div>
+              <div id="node-evaluate" class="node-card">
+                <div class="node-title">6. EVALUATE</div>
+                <div class="node-desc">Metrics & Score</div>
+              </div>
+              <div id="node-gate" class="node-card">
+                <div class="node-title">7. HUMAN GATE</div>
+                <div class="node-desc">interrupt() Pause</div>
+              </div>
+              <div id="node-commit" class="node-card">
+                <div class="node-title">8. COMMIT</div>
+                <div class="node-desc">Open Draft PR</div>
+              </div>
+              <div id="node-escalate" class="node-card">
+                <div class="node-title">ESCALATE</div>
+                <div class="node-desc">Cycle / Max Retries</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Human Review Gate Card -->
+          <div id="review-card" class="review-gate-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <h4 style="font-family: var(--font-display); font-size: 1.15rem; color: var(--accent-yellow);">
+                ⏸️ Human Approval Gate Paused (Thread ID: #sentinel-42)
+              </h4>
+              <span style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">
+                LangGraph interrupt() active
+              </span>
+            </div>
+
+            <!-- Scorecard Pills -->
+            <div class="metrics-bar">
+              <div class="metric-pill">
+                <span class="metric-label">Composite Score</span>
+                <span class="metric-val">1.00 / 1.00</span>
+              </div>
+              <div class="metric-pill">
+                <span class="metric-label">Test Pass Rate</span>
+                <span class="metric-val">100% (4/4)</span>
+              </div>
+              <div class="metric-pill">
+                <span class="metric-label">Blast Radius</span>
+                <span class="metric-val" style="color: #60a5fa;">+1 / -1 LOC</span>
+              </div>
+              <div class="metric-pill">
+                <span class="metric-label">Static Analysis</span>
+                <span class="metric-val">✅ Clean</span>
+              </div>
+            </div>
+
+            <!-- Unified Diff -->
+            <div class="diff-block">
+              <span class="diff-hunk">--- a/src/calculator.py</span>
+              <span class="diff-hunk">+++ b/src/calculator.py</span>
+              <span class="diff-hunk">@@ -5,3 +5,3 @@</span>
+              <span>     # BUG: Subtracts discount directly without multiplying by price / 100</span>
+              <span class="diff-del">-    discount_amount = discount_percent</span>
+              <span class="diff-add">+    discount_amount = price * (discount_percent / 100.0)</span>
+              <span>     return round(price - discount_amount, 2)</span>
+            </div>
+
+            <!-- Actions -->
+            <div class="approval-actions">
+              <button class="btn btn-reject" onclick="handleDecision(false)">
+                <span>✖ Reject Proposal</span>
+              </button>
+              <button class="btn btn-approve" onclick="handleDecision(true)">
+                <span>✔ Approve & Open Draft PR</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Draft PR Confirmation Banner -->
+          <div id="pr-banner" class="pr-banner">
+            <h4 style="font-family: var(--font-display); font-size: 1.1rem; color: var(--accent-green); margin-bottom: 0.35rem;">
+              🎉 Draft Pull Request Opened Successfully
+            </h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              Sentinel created branch <code style="color: var(--primary-cyan); font-family: var(--font-mono);">sentinel/fix-issue-42</code> and generated the human-approved Draft PR.
+            </p>
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+              <button onclick="openGitHubModal()" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                <span>🐙 Open Live GitHub PR Preview →</span>
+              </button>
+              <span style="font-size: 0.78rem; color: #94a3b8;">
+                (Demo environment simulation)
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Structured Logs Stream -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3><span>📜</span> State Transition Audit Logs</h3>
+        </div>
+        <div id="logs-container" class="logs-feed">
+          <div class="log-entry">
+            <div class="log-header">
+              <span class="log-node">SYSTEM</span>
+              <span>READY</span>
+            </div>
+            <div>Sentinel proposal engine initialized with PostgresSaver checkpointer.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    function addLog(fromNode, toNode, duration, message) {
+      const container = document.getElementById('logs-container');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `
+        <div class="log-header">
+          <span class="log-node">${fromNode} ➔ ${toNode}</span>
+          <span>${duration}ms</span>
+        </div>
+        <div>${message}</div>
+      `;
+      container.appendChild(entry);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function setNodeState(nodeId, stateClass) {
+      const el = document.getElementById(nodeId);
+      if (el) {
+        el.classList.remove('active', 'completed', 'interrupted');
+        if (stateClass) el.classList.add(stateClass);
+      }
+    }
+
+    async function startExecution() {
+      document.getElementById('btn-run').disabled = true;
+      document.getElementById('run-status').innerText = 'Status: Executing State Machine...';
+      document.getElementById('review-card').classList.remove('visible');
+      document.getElementById('pr-banner').classList.remove('visible');
+
+      // 1. INGEST
+      setNodeState('node-ingest', 'active');
+      addLog('START', 'INGEST', 12, 'Fetched GitHub issue #42: Discount calculation bug.');
+      await sleep(600);
+      setNodeState('node-ingest', 'completed');
+
+      // 2. PLAN
+      setNodeState('node-plan', 'active');
+      addLog('INGEST', 'PLAN', 24, 'Target file: src/calculator.py. Strategy: Multiply by percentage factor.');
+      await sleep(650);
+      setNodeState('node-plan', 'completed');
+
+      // 3. RETRIEVE
+      setNodeState('node-retrieve', 'active');
+      addLog('PLAN', 'RETRIEVE', 45, 'AST-aware chunker parsed 4 files into 7 semantic nodes using Tree-sitter.');
+      await sleep(700);
+      setNodeState('node-retrieve', 'completed');
+
+      // 4. GENERATE
+      setNodeState('node-generate', 'active');
+      addLog('RETRIEVE', 'GENERATE', 38, 'Synthesized unified diff (SHA-256 fingerprint: 2f7e8d81).');
+      await sleep(650);
+      setNodeState('node-generate', 'completed');
+
+      // 5. SANDBOX
+      setNodeState('node-sandbox', 'active');
+      addLog('GENERATE', 'SANDBOX', 1840, 'Isolated sandbox execution: git apply successful. Pytest exit code: 0 (4 passed).');
+      await sleep(900);
+      setNodeState('node-sandbox', 'completed');
+
+      // 6. EVALUATE
+      setNodeState('node-evaluate', 'active');
+      addLog('SANDBOX', 'EVALUATE', 8, 'Quality Scorecard: Composite 1.00 / 1.00, Blast radius: 1 file, Clean AST.');
+      await sleep(600);
+      setNodeState('node-evaluate', 'completed');
+
+      // 7. HUMAN GATE (interrupt)
+      setNodeState('node-gate', 'interrupted');
+      addLog('EVALUATE', 'HUMAN_GATE', 1, 'LangGraph interrupt(): Paused graph state. Awaiting human approval.');
+      document.getElementById('run-status').innerText = 'Status: ⏸️ Paused at Human Approval Gate';
+      document.getElementById('review-card').classList.add('visible');
+    }
+
+    async function handleDecision(approved) {
+      document.getElementById('review-card').classList.remove('visible');
+      setNodeState('node-gate', 'completed');
+
+      if (approved) {
+        setNodeState('node-commit', 'active');
+        addLog('HUMAN_GATE', 'COMMIT', 180, 'Approved by human reviewer: senior_engineer. Creating branch and draft PR.');
+        document.getElementById('run-status').innerText = 'Status: Opening Draft PR...';
+        await sleep(700);
+        setNodeState('node-commit', 'completed');
+        document.getElementById('pr-banner').classList.add('visible');
+        document.getElementById('run-status').innerText = 'Status: ✅ Draft PR Opened';
+      } else {
+        addLog('HUMAN_GATE', 'END', 15, 'Proposal rejected by human reviewer. Graph halted safely.');
+        document.getElementById('run-status').innerText = 'Status: ✋ Proposal Rejected';
+      }
+
+      document.getElementById('btn-run').disabled = false;
+    }
+
+    function openGitHubModal() {
+      document.getElementById('github-modal').style.display = 'flex';
+    }
+
+    function closeGitHubModal() {
+      document.getElementById('github-modal').style.display = 'none';
+    }
+  </script>
+
+  <!-- GitHub Live PR Simulation Modal -->
+  <div id="github-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 100; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 12px; width: 100%; max-width: 960px; max-height: 90vh; overflow-y: auto; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
+      
+      <!-- GitHub Modal Top Bar -->
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #21262d; background: #161b22; border-radius: 12px 12px 0 0;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <svg height="24" viewBox="0 0 16 16" width="24" fill="#f0f6fc"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path></svg>
+          <span style="font-size: 0.9rem; color: #8b949e;"><strong style="color: #58a6ff;">demo-org</strong> / <strong style="color: #58a6ff;">billing-engine</strong></span>
+        </div>
+        <button onclick="closeGitHubModal()" style="background: transparent; border: none; color: #8b949e; font-size: 1.5rem; cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+
+      <!-- PR Title & Header -->
+      <div style="padding: 1.5rem 1.5rem 0.5rem 1.5rem;">
+        <h2 style="font-size: 1.45rem; font-weight: 500; color: #f0f6fc; margin-bottom: 0.5rem;">
+          [Sentinel Draft] Fix for Issue #42: Fix incorrect discount calculation in calculate_discount <span style="color: #8b949e; font-weight: 300;">#42</span>
+        </h2>
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
+          <span style="background: #30363d; color: #f0f6fc; padding: 0.2rem 0.65rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem;">
+            <span>Draft</span>
+          </span>
+          <span style="font-size: 0.85rem; color: #8b949e;">
+            <strong style="color: #f0f6fc;">sentinel-agent[bot]</strong> wants to merge 1 commit into <code style="background: rgba(110,118,129,0.4); padding: 0.15rem 0.35rem; border-radius: 4px; color: #f0f6fc;">main</code> from <code style="background: rgba(110,118,129,0.4); padding: 0.15rem 0.35rem; border-radius: 4px; color: #f0f6fc;">sentinel/fix-issue-42</code>
+          </span>
+        </div>
+      </div>
+
+      <!-- Notice Banner -->
+      <div style="margin: 0 1.5rem 1.5rem 1.5rem; background: rgba(56, 139, 253, 0.1); border: 1px solid rgba(56, 139, 253, 0.4); border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.82rem; color: #58a6ff; display: flex; align-items: center; gap: 0.5rem;">
+        <span>ℹ️</span>
+        <span><strong>Live Demonstration Preview</strong>: Sentinel ran on the local demo repository. To open actual Pull Requests on your live GitHub profile/organization, add your <code style="background: rgba(0,0,0,0.3); padding: 2px 4px;">GITHUB_TOKEN</code> to your <code style="background: rgba(0,0,0,0.3); padding: 2px 4px;">.env</code> file.</span>
+      </div>
+
+      <!-- PR Body Content -->
+      <div style="padding: 0 1.5rem 1.5rem 1.5rem;">
+        <div style="border: 1px solid #30363d; border-radius: 8px; background: #0d1117;">
+          <div style="background: #161b22; padding: 0.75rem 1rem; border-bottom: 1px solid #30363d; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: #f0f6fc;">sentinel-agent[bot] commented just now</span>
+            <span style="font-size: 0.75rem; border: 1px solid #30363d; border-radius: 12px; padding: 0.1rem 0.5rem; color: #8b949e;">Bot</span>
+          </div>
+          <div style="padding: 1.25rem; font-size: 0.88rem; line-height: 1.6;">
+            <h3 style="font-size: 1.15rem; color: #f0f6fc; margin-bottom: 0.75rem;">🛡️ Sentinel Patch Proposal (Human Approved)</h3>
+            <p style="margin-bottom: 0.75rem;">Closes #42</p>
+            
+            <h4 style="font-size: 0.95rem; color: #f0f6fc; margin-top: 1rem; margin-bottom: 0.5rem;">📋 Review & Human Approval</h4>
+            <ul style="margin-left: 1.25rem; margin-bottom: 1rem;">
+              <li><strong>Reviewer</strong>: <code>senior_engineer</code></li>
+              <li><strong>Reviewer Feedback</strong>: <em>"Surgical fix, all 4 tests now passing."</em></li>
+              <li><strong>Composite Quality Score</strong>: <strong style="color: #3fb950;">1.00 / 1.00</strong></li>
+            </ul>
+
+            <h4 style="font-size: 0.95rem; color: #f0f6fc; margin-top: 1rem; margin-bottom: 0.5rem;">🧪 Evaluation Summary</h4>
+            <ul style="margin-left: 1.25rem; margin-bottom: 1rem;">
+              <li><strong>Tests</strong>: <span style="color: #3fb950; font-weight: 600;">✅ Passed 4/4 tests in isolated sandbox</span></li>
+              <li><strong>Blast Radius</strong>: +1 added / -1 deleted LOC (1 file touched)</li>
+              <li><strong>Files Modified</strong>: <code>src/calculator.py</code></li>
+              <li><strong>Static Analysis</strong>: ✅ Clean (0 syntax or linter violations)</li>
+            </ul>
+
+            <h4 style="font-size: 0.95rem; color: #f0f6fc; margin-top: 1rem; margin-bottom: 0.5rem;">📄 Unified Diff Applied</h4>
+            <pre style="background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 0.75rem; font-family: monospace; font-size: 0.82rem; overflow-x: auto;">
+--- a/src/calculator.py
++++ b/src/calculator.py
+@@ -5,3 +5,3 @@
+     # BUG: Subtracts discount directly without multiplying by price / 100
+-    discount_amount = discount_percent
++    discount_amount = price * (discount_percent / 100.0)
+     return round(price - discount_amount, 2)
+            </pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div style="padding: 1rem 1.5rem; border-top: 1px solid #21262d; background: #161b22; border-radius: 0 0 12px 12px; display: flex; justify-content: flex-end;">
+        <button onclick="closeGitHubModal()" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Close Preview</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

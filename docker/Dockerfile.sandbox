@@ -1,0 +1,26 @@
+# Sentinel Hardened Isolated Sandbox Image
+FROM python:3.12-slim
+
+# Install system dependencies (git, patch, coreutils)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    patch \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install testing and linting tools
+RUN pip install --no-cache-dir \
+    pytest \
+    pytest-asyncio \
+    ruff
+
+# Create an unprivileged sandbox user
+RUN useradd -m -u 1000 sandbox_user
+
+# Create workspace directory with proper permissions
+RUN mkdir -p /workspace && chown -R sandbox_user:sandbox_user /workspace
+
+USER sandbox_user
+WORKDIR /workspace
+
+CMD ["/bin/sh"]
